@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>オセロ</title>
+    <link rel="shortcut icon" href="./オセロ.ico" type="image/x-icon">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        html {
+            overflow: hidden;
+        }
+
+        .body {
+            height: 100vh;
+            max-width: 100vw;
+            max-height: 100vh;
+            overflow: auto;
+            .board {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                translate: -50% -50%;
+                height: min(calc(100vh - 40px), calc(100vw - 40px));
+                width: min(calc(100vh - 40px), calc(100vw - 40px));
+                background-color: black;
+                border: solid min(.5vh, .5vw) black;
+                display: grid;
+                grid-template:
+                    1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr /
+                    1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr
+                ;
+                gap: .5%;
+                .square {
+                    background-color: #009000;
+                    position: relative;
+                }
+                .square.white::before {
+                    content: '';
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    translate: -50% -50%;
+                    width: 80%;
+                    height: 80%;
+                    border-radius: 50%;
+                    background-color: white;
+                }
+                .square.black::before {
+                    content: '';
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    translate: -50% -50%;
+                    width: 80%;
+                    height: 80%;
+                    border-radius: 50%;
+                    background-color: black;
+                }
+                .square.can::before {
+                    content: '';
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    translate: -50% -50%;
+                    width: 10%;
+                    height: 10%;
+                    border-radius: 50%;
+                    background-color: white;
+                }
+            }
+            .pass {
+                display: none;
+                opacity: 0;
+                transition: opacity .1s ease;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                translate: -50% -50%;
+                font-size: min(10vh, 10vw);
+                background-color: #ccc6;
+                border-radius: min(1vh, 1vw);
+                padding-inline: .5em;
+                padding-top: .16em;
+                border: none;
+                color: white;
+                font-weight: 900;
+            }
+            .pass.on {
+                opacity: 1;
+                transition: opacity .05s ease;
+            }
+            .game_over {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                display: none;
+                place-items: center;
+                background-color: #0006;
+                backdrop-filter: blur(4px);
+                opacity: 0;
+                transition: opacity .5s ease;
+                .inner {
+                    display: grid;
+                    justify-content: center;
+                    color: white;
+                    text-align: center;
+                    font-weight: 900;
+                    .finish {
+                        font-size: min(10vh, 10vw);
+                    }
+                    .number {
+                        display: grid;
+                        gap: min(8vh, 8vw);
+                        grid-template-columns: 1fr 1fr;
+                        translate: min(6vh, 6vw) 0;
+                        .black {
+                            font-size: min(7.5vh, 7.5vw);
+                            position: relative;
+                            height: min(15vh, 15vw);
+                            display: grid;
+                            align-items: center;
+                            /* padding-inline: min(2vh, 2vw); */
+                        }
+                        .black.win {
+                            font-size: min(10vh, 10vw);
+                            color: yellow;
+                        }
+                        .black::before {
+                            content: '';
+                            position: absolute;
+                            top: 50%;
+                            left: -50%;
+                            translate: 0 -50%;
+                            /* width: 100%; */
+                            aspect-ratio: 1 / 1;
+                            height: 70%;
+                            background-color: black;
+                            border-radius: max(100vh, 100vw);
+                        }
+                        .white {
+                            font-size: min(7.5vh, 7.5vw);
+                            position: relative;
+                            height: min(15vh, 15vw);
+                            display: grid;
+                            align-items: center;
+                            /* padding-inline: min(2vh, 2vw); */
+                        }
+                        .white.win {
+                            font-size: min(10vh, 10vw);
+                            color: yellow;
+                        }
+                        .white::before {
+                            content: '';
+                            position: absolute;
+                            top: 50%;
+                            left: -50%;
+                            translate: 0 -50%;
+                            /* width: 100%; */
+                            aspect-ratio: 1 / 1;
+                            height: 70%;
+                            background-color: white;
+                            border-radius: max(100vh, 100vw);
+                        }
+                    }
+                    .result {
+                        font-size: min(9vh, 9vw);
+                    }
+                    .result::before {
+                        content: 'winner ';
+                    }
+                    .restart {
+                        text-align: center;
+                        width: max-content;
+                        font-size: min(2vh, 2vw);
+                        color: black;
+                        background-color: white;
+                        padding-inline: 5%;
+                        padding-block: 1%;
+                        border-radius: max(100vh, 100vw);
+                        margin-inline: auto;
+                    }
+                    .restart:active {
+                        background-color: #eee;
+                    }
+                }
+            }
+            .game_over.on {
+                opacity: 1;
+                transition: opacity .5s ease;
+            }
+        }
+
+        @media screen and (height <= 100vw) {
+            .body {
+                background: linear-gradient(to left, black 0, black 50%, white 50%, white 100%);
+                .white_counter {
+                    position: absolute;
+                    top: 0;
+                    left: 20px;
+                    width: calc((100vw - 100vh) / 2 - 20px);
+                    height: 100%;
+                    display: grid;
+                    place-items: center;
+                    .white_count {
+                        display: grid;
+                        place-items: center;
+                        width: 50%;
+                        aspect-ratio: 1 / 1;
+                        border-radius: 1vh;
+                        border: solid 5px black;
+                        background-color: white;
+                        color: black;
+                        font-size: 4vw;
+                        font-weight: 900;
+                        transform: rotate(180deg);
+                    }
+                    .white_count.turn {
+                        border: solid 5px red;
+                    }
+                }
+                .black_counter {
+                    position: absolute;
+                    top: 0;
+                    right: 20px;
+                    width: calc((100vw - 100vh) / 2 - 20px);
+                    height: 100%;
+                    display: grid;
+                    place-items: center;
+                    .black_count {
+                        display: grid;
+                        place-items: center;
+                        width: 50%;
+                        aspect-ratio: 1 / 1;
+                        border-radius: 1vh;
+                        border: solid 5px white;
+                        background-color: black;
+                        color: white;
+                        font-size: 4vw;
+                        font-weight: 900;
+                    }
+                    .black_count.turn {
+                        border: solid 5px red;
+                    }
+                }
+            }
+        }
+
+        @media screen and (width < 100vh) {
+            .body {
+                background: linear-gradient(to top, black 0, black 50%, white 50%, white 100%);
+                .white_counter {
+                    position: absolute;
+                    top: 20px;
+                    left: 0;
+                    width: 100%;
+                    height: calc((100vh - 100vw) / 2 - 20px);
+                    display: grid;
+                    place-items: center;
+                    .white_count {
+                        display: grid;
+                        place-items: center;
+                        height: 50%;
+                        aspect-ratio: 1 / 1;
+                        border-radius: 1vw;
+                        border: solid 5px black;
+                        background-color: white;
+                        color: black;
+                        font-size: 4vh;
+                        font-weight: 900;
+                        transform: rotate(180deg);
+                    }
+                    .white_count.turn {
+                        border: solid 5px red;
+                    }
+                }
+                .black_counter {
+                    position: absolute;
+                    bottom: 20px;
+                    left: 0;
+                    width: 100%;
+                    height: calc((100vh - 100vw) / 2 - 20px);
+                    display: grid;
+                    place-items: center;
+                    .black_count {
+                        display: grid;
+                        place-items: center;
+                        height: 50%;
+                        aspect-ratio: 1 / 1;
+                        border-radius: 1vw;
+                        border: solid 5px white;
+                        background-color: black;
+                        color: white;
+                        font-size: 4vh;
+                        font-weight: 900;
+                    }
+                    .black_count.turn {
+                        border: solid 5px red;
+                    }
+                }
+            }
+        }
+    </style>
+</head>
+<body class="body">
+    <div class="board"></div>
+    <div class="white_counter">
+        <div class="white_count"></div>
+    </div>
+    <div class="black_counter">
+        <div class="black_count turn"></div>
+    </div>
+    <div class="pass">パス</div>
+    <div class="game_over">
+        <div class="inner">
+            <div class="finish">FINISH</div>
+            <div class="number">
+                <div class="black"></div>
+                <div class="white"></div>
+            </div>
+            <div class="result"></div>
+            <div class="restart" onclick="restart()">新しいゲーム</div>
+        </div>
+    </div>
+    <script>
+        const board = document.querySelectorAll('.board')[0];
+        const pass_html = document.querySelectorAll('.pass')[0];
+        const game_over_html = document.querySelectorAll('.game_over')[0];
+        const black_html = document.querySelectorAll('.black')[0];
+        const white_html = document.querySelectorAll('.white')[0];
+        const result = document.querySelectorAll('.result')[0];
+        const black_count = document.querySelectorAll('.black_count')[0];
+        const white_count = document.querySelectorAll('.white_count')[0];
+        var squares = [];
+        var turn = 'black';
+        var not = 'white';
+        var data = {none: 64, can: 0, black: 0, white: 0};
+        const ja = {black: '黒', white: '白'};
+
+        class Square {
+            constructor(address) {
+                this.address = address;
+                let html = document.createElement('div');
+                html.id = String(this.address[0]) + String(this.address[1]);
+                html.className = 'square none';
+                this.html = html;
+                this.status = this.html.classList[1];
+                this.html.addEventListener('click', () => {this.place()});
+                board.appendChild(this.html);
+            }
+
+            none() {
+                this.change('none');
+            }
+
+            can() {
+                this.change('can');
+            }
+
+            black() {
+                this.change('black');
+            }
+
+            white() {
+                this.change('white');
+            }
+
+            change(text) {
+                if (text != undefined) {
+                    this.html.className = `square ${text}`;
+                    data[this.status]--;
+                    this.status = text;
+                    data[this.status]++;
+                } else if (this.html.classList.contains('white')) {
+                    this.change('black');
+                } else if (this.html.classList.contains('black')) {
+                    this.change('white');
+                }
+            }
+
+            place() {
+                if (this.html.classList.contains('can')) {
+                    this.change(turn);
+                    let i = this.address[0];
+                    let j = this.address[1];
+                    third: for (let k = -1; k <= 1; k++) {
+                        fourth: for (let l = -1; l <= 1; l++) {
+                            if (k == 0 && l == 0 || i + k < 0 || i + k > 7 || j + l < 0 || j + l > 7) {
+                                continue;
+                            }
+                            let ii = Number(String(i));
+                            let jj = Number(String(j));
+                            do {
+                                if (squares[ii + k][jj + l].status != not) {
+                                    continue fourth;
+                                }
+                                ii += k;
+                                jj += l;
+                                if (ii + k < 0 || ii + k > 7 || jj + l < 0 || jj + l > 7) {
+                                    continue fourth;
+                                }
+                            } while (squares[ii + k][jj + l].status != turn)
+                            ii = Number(String(i));
+                            jj = Number(String(j));
+                            while (squares[ii + k][jj + l].status != turn) {
+                                squares[ii + k][jj + l].change();
+                                ii += k;
+                                jj += l;
+                            }
+                        }
+                    }
+                    turn_switch();
+                    judge();
+                }
+            }
+        }
+
+        function turn_switch() {
+            if (turn == 'black') {
+                turn = 'white';
+                not = 'black';
+            } else {
+                turn = 'black';
+                not = 'white';
+            }
+            squares.forEach(element => {element.forEach(e => {
+                if (e.status == 'can') {
+                    e.none();
+                }
+            })});
+            black_count.classList.toggle('turn');
+            white_count.classList.toggle('turn');
+        }
+
+        function judge() {
+            for (let i = 0; i < 8; i++) {
+                for (let j = 0; j < 8; j++) {
+                    if (squares[i][j].status != 'none') {
+                        continue;
+                    }
+                    third: for (let k = -1; k <= 1; k++) {
+                        fourth: for (let l = -1; l <= 1; l++) {
+                            if (k == 0 && l == 0 || i + k < 0 || i + k > 7 || j + l < 0 || j + l > 7) {
+                                continue;
+                            }
+                            let ii = Number(String(i));
+                            let jj = Number(String(j));
+                            do {
+                                if (squares[ii + k][jj + l].status != not) {
+                                    continue fourth;
+                                }
+                                ii += k;
+                                jj += l;
+                                if (ii + k < 0 || ii + k > 7 || jj + l < 0 || jj + l > 7) {
+                                    continue fourth;
+                                }
+                            } while (squares[ii + k][jj + l].status != turn)
+                            squares[i][j].can();
+                            break third;
+                        }
+                    }
+                }
+            }
+            black_count.innerHTML = data['black'];
+            white_count.innerHTML = data['white'];
+            if (data['none'] == 0 && data['can'] == 0 || data['black'] == 0 || data['white'] == 0) {
+                setTimeout(() => {
+                    game_over();
+                }, 500);
+            } else if (data['can'] == 0) {
+                pass();
+                setTimeout(() => {
+                    turn_switch();
+                    judge();
+                }, 1000);
+            }
+        }
+
+        function game_start() {
+            squares.forEach(element => {element.forEach(e => {e.none()})});
+            squares[3][3].white();
+            squares[3][4].black();
+            squares[4][3].black();
+            squares[4][4].white();
+            turn = 'black';
+            not = 'white';
+            judge();
+            black_count.classList.add('turn');
+            white_count.classList.remove('turn');
+        }
+
+        function pass() {
+            pass_html.style.display = 'block';
+            setTimeout(() => {
+                pass_html.classList.add('on');
+            }, 1);
+            setTimeout(() => {
+                pass_html.classList.remove('on');
+                setTimeout(() => {
+                    pass_html.style.display = 'none';
+                }, 100);
+            }, 900)
+        }
+
+        function game_over() {
+            game_over_html.style.display = 'grid';
+            black_html.innerHTML = data['black'];
+            white_html.innerHTML = data['white'];
+            if (data['black'] == data['white']) {
+                result.innerHTML = 'なし';
+            } else if (data['black'] < data['white']) {
+                result.innerHTML = '白';
+                white_html.classList.add('win');
+            } else if (data['black'] > data['white']) {
+                result.innerHTML = '黒';
+                black_html.classList.add('win');
+            }
+            setTimeout(() => {
+                game_over_html.classList.add('on');
+            }, 1);
+        }
+
+        function restart() {
+            game_over_html.classList.remove('on');
+            game_start();
+            setTimeout(() => {
+                game_over_html.style.display = 'none';
+                black_html.classList.remove('win');
+                white_html.classList.remove('win');
+            }, 500);
+        }
+
+        for (let i = 0; i < 8; i++) {
+            let alt = [];
+            for (let j = 0; j < 8; j++) {
+                let s = new Square([i, j]);
+                alt.push(s);
+            }
+            squares.push(alt);
+        }
+
+        window.onload = game_start;
+
+        // チートコマンド
+        function b() {
+            squares.forEach(element => {element.forEach(e => {e.black()})});
+            judge();
+        }
+
+        function w() {
+            squares.forEach(element => {element.forEach(e => {e.white()})});
+            judge();
+        }
+    </script>
+</body>
+</html>
