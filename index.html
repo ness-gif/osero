@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="質素な対戦型のオセロです。">
+    <meta name="keywords" content="簡易オセロ, オセロ, osero, github, ギットハブ">
     <title>オセロ</title>
     <link rel="shortcut icon" href="./オセロ.ico" type="image/x-icon">
     <style>
@@ -342,6 +344,7 @@
         var turn = 'black';
         var not = 'white';
         var data = {none: 64, can: 0, black: 0, white: 0};
+        var already = false;
         const ja = {black: '黒', white: '白'};
 
         class Square {
@@ -387,6 +390,7 @@
 
             place() {
                 if (this.html.classList.contains('can')) {
+                    already = false;
                     this.change(turn);
                     let i = this.address[0];
                     let j = this.address[1];
@@ -475,6 +479,12 @@
                     game_over();
                 }, 500);
             } else if (data['can'] == 0) {
+                if (already) {
+                    game_over();
+                    return;
+                } else {
+                    already = true;
+                }
                 pass();
                 setTimeout(() => {
                     turn_switch();
